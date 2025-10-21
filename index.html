@@ -497,25 +497,25 @@
   /***********************
    * Persistence helpers *
    ***********************/
-  function persistAll() {
-    const payload = {
-      nodes: nodes.get().map(n => ({
-        id: n.id, label: n.label, info: n.info, notes: n.notes || "",
-        color: (typeof n.color === 'string' ? n.color : n.color?.background) || "#fff1e3",
-        constellation: n.constellation || initialConfs[0],
-        physics: (n.physics !== false),
-        fixed: !!(n.fixed && (n.fixed.x === true || n.fixed === true)),
-        x: (n.x != null ? n.x : undefined),
-        y: (n.y != null ? n.y : undefined),
-        image: n.image || "",
-        audio: n.audio || "",
-        video: n.video || "",
-        link: n.link || ""
-      })),
-      edges: edges.get().map(e => ({ from: e.from, to: e.to, id: e.id }))
-    };
-    saveState(payload);
-  }
+function persistAll() {
+  const payload = {
+    nodes: nodes.get().map(n => ({
+      id: n.id, label: n.label, info: n.info, notes: n.notes || "",
+      color: (typeof n.color === 'string' ? n.color : n.color?.background) || "#fff1e3",
+      constellation: n.constellation || initialConfs[0],
+      physics: (n.physics !== false),
+      fixed: !!(n.fixed && (n.fixed.x === true || n.fixed === true)),
+      x: (n.x != null ? n.x : undefined),
+      y: (n.y != null ? n.y : undefined),
+      image: n.image || "",
+      audio: n.audio || "",
+      video: n.video || "",
+      link: n.link || ""
+    })),
+    edges: edges.get().map(e => ({ from: e.from, to: e.to, id: e.id }))
+  };
+  return saveState(payload);
+}
 
 
   // Save on changes
@@ -670,7 +670,7 @@ function updateEditorForSelection(nodeId) {
   nodeLabelInput.value = n.label || "";
   nodeInfoInput.value = n.info || "";
   nodeNotesInput.value = n.notes || "";
-  nodeColorInput.value = n.color || "#fff1e3";
+  nodeColorInput.value = n.color?.background || n.color || "#fff1e3";
   nodeImageInput.value = n.image || "";
   nodeAudioInput.value = n.audio || "";
   nodeVideoInput.value = n.video || "";
