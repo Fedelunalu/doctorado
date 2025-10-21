@@ -501,7 +501,7 @@
     const payload = {
       nodes: nodes.get().map(n => ({
         id: n.id, label: n.label, info: n.info, notes: n.notes || "",
-        color: n.color?.background || "#fff1e3",
+        color: (typeof n.color === 'string' ? n.color : n.color?.background) || "#fff1e3",
         constellation: n.constellation || initialConfs[0],
         physics: (n.physics !== false),
         fixed: !!(n.fixed && (n.fixed.x === true || n.fixed === true)),
