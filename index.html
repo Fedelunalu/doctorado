@@ -1243,7 +1243,7 @@ function openOverlay(nodeId, pointer) {
   }
 
   // ---------- Collaborative editing: periodic sync ----------
-  // Poll for changes every 30 seconds to enable collaborative editing (reduced frequency to avoid constant updates)
+  // Poll for changes every 5 minutes to enable collaborative editing (reduced frequency to avoid constant updates)
   setInterval(async () => {
     if (isSyncing) return; // Prevent overlapping syncs
     isSyncing = true;
@@ -1254,56 +1254,42 @@ function openOverlay(nodeId, pointer) {
         return;
       }
 
-      const currentNodes = nodes.get();
-      const currentEdges = edges.get();
-
-      // Normalize and sort for comparison (exclude x,y to avoid position mismatches)
-      const normalizeNode = n => ({
-        id: n.id,
-        label: n.label,
-        info: n.info,
-        notes: n.notes || "",
-        color: n.color,
-        constellation: n.constellation,
-        physics: n.physics,
-        fixed: n.fixed
-      });
-
-      const latestNodesStr = JSON.stringify(latest.nodes.map(normalizeNode).sort((a, b) => a.id - b.id));
-      const currentNodesStr = JSON.stringify(currentNodes.map(normalizeNode).sort((a, b) => a.id - b.id));
-
-      const latestEdgesStr = JSON.stringify(latest.edges.map(e => ({ from: e.from, to: e.to, id: e.id })).sort((a, b) => a.id.localeCompare(b.id)));
-      const currentEdgesStr = JSON.stringify(currentEdges.map(e => ({ from: e.from, to: e.to, id: e.id })).sort((a, b) => a.id.localeCompare(b.id)));
+      const remoteNodes = latest.nodes;
+      const remoteEdges = latest.edges;
+      const currentNodeIds = new Set(nodes.getIds());
+      const currentEdgeIds = new Set(edges.getIds());
 
       let updated = false;
 
-      if (latestNodesStr !== currentNodesStr) {
-        // Prevent overwriting if local has more nodes (e.g., save failed previously)
-        if (latest.nodes.length < currentNodes.length) {
-          console.log("Local has more nodes than remote, skipping overwrite to prevent data loss");
+      // Merge nodes: add new, update existing, don't remove local
+      remoteNodes.forEach(remoteNode => {
+        const copy = { ...remoteNode, color: { background: remoteNode.color || "#fff1e3" } };
+        if (copy.fixed === true) copy.fixed = { x: true, y: true };
+        if (!currentNodeIds.has(remoteNode.id)) {
+          // Add new node
+          nodes.add(copy);
+          updated = true;
         } else {
-          nodes.clear();
-          nodes.add(latest.nodes.map(n => {
-            const copy = { ...n, color: { background: n.color || "#fff1e3" } };
-            if (copy.fixed === true) copy.fixed = { x: true, y: true };
-            return copy;
-          }));
-          refreshConstellationOptions();
-          ensureGroupSeparation();
+          // Update existing node
+          nodes.update(copy);
           updated = true;
         }
-      }
+      });
 
-      if (latestEdgesStr !== currentEdgesStr) {
-        edges.clear();
-        edges.add(latest.edges);
-        updated = true;
-      }
+      // Merge edges: add new, don't remove local
+      remoteEdges.forEach(remoteEdge => {
+        if (!currentEdgeIds.has(remoteEdge.id)) {
+          edges.add(remoteEdge);
+          updated = true;
+        }
+      });
 
       if (updated) {
         localTimestamp = latest.timestamp;
-        console.log("Sincronizado con cambios colaborativos");
-        // Reset selection if node was removed
+        refreshConstellationOptions();
+        ensureGroupSeparation();
+        console.log("Sincronizado con cambios colaborativos (merge)");
+        // Reset selection if node was updated/removed (though we don't remove)
         if (activeNodeId && !nodes.get(activeNodeId)) {
           updateEditorForSelection(null);
         }
@@ -1313,7 +1299,7 @@ function openOverlay(nodeId, pointer) {
     } finally {
       isSyncing = false;
     }
-  }, 30000); // Sync every 30 seconds
+  }, 300000); // Sync every 5 minutes
 
 
   // ---------- Manual sync button ----------
