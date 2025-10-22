@@ -1351,6 +1351,12 @@ function openOverlay(nodeId, pointer) {
     try {
       const latest = await loadState();
       if (latest && latest.nodes && latest.edges) {
+        // Capture current state before syncing
+        const currentNodes = nodes.get();
+        const currentEdges = edges.get();
+        const currentNodeIds = new Set(currentNodes.map(n => n.id));
+        const currentEdgeIds = new Set(currentEdges.map(e => e.id));
+
         nodes.clear();
         edges.clear();
         nodes.add(latest.nodes.map(n => {
@@ -1362,7 +1368,26 @@ function openOverlay(nodeId, pointer) {
         refreshConstellationOptions();
         ensureGroupSeparation();
         updateEditorForSelection(null); // Reset selection
-        setMessage(storageMessage, "Sincronizado ✓", 2000);
+
+        // Identify additions
+        const newNodes = latest.nodes.filter(n => !currentNodeIds.has(n.id));
+        const newEdges = latest.edges.filter(e => !currentEdgeIds.has(e.id));
+        const addedNodeLabels = newNodes.map(n => n.label).slice(0, 5); // Limit to first 5 for brevity
+        const addedEdgeCount = newEdges.length;
+
+        // Build message with references
+        let syncMessage = "Sincronizado ✓";
+        if (addedNodeLabels.length > 0 || addedEdgeCount > 0) {
+          const parts = [];
+          if (addedNodeLabels.length > 0) {
+            parts.push(`Nodos: ${addedNodeLabels.join(', ')}${newNodes.length > 5 ? '...' : ''}`);
+          }
+          if (addedEdgeCount > 0) {
+            parts.push(`Enlaces: ${addedEdgeCount}`);
+          }
+          syncMessage = `Sincronizado: +${parts.join(', +')}`;
+        }
+        setMessage(storageMessage, syncMessage, 4000); // Longer timeout for detailed message
       } else {
         setMessage(storageMessage, "No hay datos para sincronizar", 2000);
       }
