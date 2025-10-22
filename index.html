@@ -141,6 +141,8 @@
       <div class="section">
         <h2>Guardar / Reset</h2>
         <div style="display:flex;gap:8px;">
+          <button id="saveChanges">💾 Guardar cambios</button>
+          <button id="deleteConstellation">🗑️ Eliminar constelación</button>
           <button id="exportJSON">Exportar JSON</button>
           <button id="importJSON">Importar JSON</button>
           <button id="resetBtn">Resetear</button>
@@ -1164,6 +1166,42 @@ function openOverlay(nodeId, pointer) {
     if (!confirm("¿Borrar todo y volver al estado inicial?")) return;
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
+  });
+
+
+  // ---------- Save Changes button ----------
+  const saveChangesBtn = document.getElementById("saveChanges");
+  saveChangesBtn.addEventListener("click", () => {
+    persistAll();
+    setMessage(storageMessage, "Cambios guardados ✓", 2000);
+  });
+
+
+  // ---------- Delete Constellation button ----------
+  const deleteConstellationBtn = document.getElementById("deleteConstellation");
+  deleteConstellationBtn.addEventListener("click", () => {
+    const constellations = Array.from(new Set(nodes.get().map(n => n.constellation || initialConfs[0])));
+    if (constellations.length <= 1) {
+      setMessage(storageMessage, "No hay constelaciones para eliminar", 2000);
+      return;
+    }
+    const toDelete = prompt("Nombre de la constelación a eliminar:");
+    if (!toDelete) return;
+    if (!constellations.includes(toDelete)) {
+      setMessage(storageMessage, "Constelación no encontrada", 2000);
+      return;
+    }
+    if (!confirm(`¿Eliminar constelación "${toDelete}" y todos sus nodos?`)) return;
+    // Remove nodes in that constellation
+    const nodesToRemove = nodes.get().filter(n => n.constellation === toDelete).map(n => n.id);
+    nodes.remove(nodesToRemove);
+    // Remove edges connected to those nodes
+    const edgesToRemove = edges.get().filter(e => nodesToRemove.includes(e.from) || nodesToRemove.includes(e.to)).map(e => e.id);
+    edges.remove(edgesToRemove);
+    persistAll();
+    refreshConstellationOptions();
+    ensureGroupSeparation();
+    setMessage(storageMessage, `Constelación "${toDelete}" eliminada`, 2000);
   });
 
 
